@@ -1,0 +1,39 @@
+PROGRAM Start_Game
+%COMMENT = 'Start Game'
+%NOLOCKGROUP ---- Don't lock any motion groups
+%INCLUDE KLEVKEYS
+
+VAR
+Status : INTEGER
+Prog_Index : INTEGER
+
+ROUTINE Clr_Scr FROM TicTacToe
+
+BEGIN
+	REPEAT
+	Clr_Scr -- Clears the TPDISPLAY screen
+	WRITE('Do you want to start a new game?')
+	WRITE TPPROMPT('(Select F4 = Yes or F5 = No when ready)')
+	WRITE TPFUNC (CHR(128),CHR(137)) -- Home Cursor and Clear to End-of-line
+
+	SET_CURSOR (TPFUNC, 1, 26, Status)
+	WRITE TPFUNC ('YES',CR)
+	SET_CURSOR (TPFUNC, 1, 34, Status)
+	WRITE TPFUNC ('NO',CR)
+	
+	wait for (TPIN[KY_F4_S]) OR (TPIN[KY_F5_S]) -- Shift F4 or Shift F5
+	
+	IF TPIN[KY_F4_S]=ON THEN
+	SET_CURSOR(TPDISPLAY,1,1,Status)
+	CALL_PROG('TicTacToe',Prog_Index)
+	ENDIF
+	
+	IF TPIN[KY_F5_S]=ON THEN
+	Clr_Scr -- Clears the TPDISPLAY screen
+	SET_CURSOR(TPDISPLAY,1,1,Status) 
+	WRITE('Goodbye')
+	ABORT
+	ENDIF
+		
+	UNTIL (FALSE)
+END Start_Game

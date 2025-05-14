@@ -1,0 +1,33 @@
+PROGRAM Random_Num
+%COMMENT = 'Random Number'
+%NOLOCKGROUP ---- Don't lock any motion groups
+
+CONST
+INCREMENT = 13849
+MODULUS = 65536
+MULTIPLIER = 25173
+
+VAR
+Max_Num :  INTEGER
+Seed IN CMOS : INTEGER
+Rnd_Num : INTEGER
+
+-- Routine "Random"
+ROUTINE Random(Seed : INTEGER) : REAL
+BEGIN
+	Seed = (Seed * MULTIPLIER + INCREMENT) MOD MODULUS
+	RETURN(Seed/65535.0)
+END Random
+
+BEGIN
+	-- Initializes variables
+	Max_Num = 9
+
+	-- Initializes the Seed
+	IF UNINIT(Seed) THEN -- Returns TRUE if Seed is uninitialized
+		Seed = 259
+	ENDIF
+	
+	Rnd_Num = ROUND(ABS((Random(Seed)*Max_Num)))
+	
+END Random_Num

@@ -1,0 +1,426 @@
+PROGRAM TicTacToe_V2
+%COMMENT = 'TicTacToe V2'
+%NOLOCKGROUP
+%NOPAUSE = ERROR+COMMAND+TPENABLE
+
+CONST
+Dimension = 9
+
+TYPE
+Board_Data FROM Board_Def = STRING[1]
+Board_Array FROM Board_Def = ARRAY[Dimension] OF Board_Data
+
+VAR
+Board FROM Board_Def : Board_Array
+End_Game: BOOLEAN
+Prog_Index : INTEGER
+Rnd_Num FROM Random_Num : INTEGER
+First_Move : BOOLEAN
+
+-- Routine "Clr_Scr"
+ROUTINE Clr_Scr
+BEGIN
+	WRITE (CHR(128),CHR(137)) -- By default this will clear TPDISPLAY
+	WRITE TPERROR  (CR,'                                       ',CR)
+	WRITE TPSTATUS (CR,'                                        ',CR)
+	WRITE TPPROMPT(CR,'                                        ',CR)
+	WRITE TPFUNC      (CR,'                                        ',CR)
+	FORCE_SPMENU(TP_PANEL,SPI_TPUSER,1) -- Force the Teach Pendant USER screen
+													-- to be visible	
+END Clr_Scr
+
+-- Routine "Print_Board"
+ROUTINE PrintBoard(Board : Board_Array)
+
+BEGIN
+	
+	Clr_Scr
+	
+	-- Print the board
+	WRITE('Board Positions:',CR)
+	WRITE('1|2|3','          ',Board[1], '|', Board[2], '|', Board[3],CR)
+	WRITE('-+-+-','          ','-+-+-',CR)
+	WRITE('4|5|6','          ',Board[4], '|', Board[5], '|', Board[6],CR)
+	WRITE('-+-+-','          ','-+-+-',CR)
+	WRITE('7|8|9','          ',Board[7], '|', Board[8], '|', Board[9],CR)
+	WRITE(CR)
+	
+END PrintBoard
+
+-- Routine "CheckForDraw"
+ROUTINE CheckForDraw(Board: Board_Array): BOOLEAN
+
+VAR
+i : INTEGER
+Dimension : INTEGER
+Draw : BOOLEAN
+
+BEGIN
+	
+	-- Initializes variables
+	Dimension = ARRAY_LEN(Board)
+	Draw = TRUE
+	
+	-- Check for empty cell in the board
+	FOR i = 1 TO Dimension DO
+		IF Board[i] = ' ' THEN
+			Draw = FALSE
+		ENDIF
+	ENDFOR
+	
+	-- Returns the result
+	RETURN(Draw)
+	
+END CheckForDraw
+
+-- Routine "CheckForWin"
+ROUTINE CheckForWin(Board : Board_Array): BOOLEAN
+
+VAR
+Win : BOOLEAN
+
+BEGIN
+	
+	-- Initializes variables
+	Win = FALSE
+	
+	-- Check for raw 1 for win
+	IF (Board[1] = Board[2]) AND (Board[1] = Board[3]) AND (Board[1] <> ' ') THEN
+		Win = TRUE
+	ENDIF
+	-- Check for raw 2 for win
+	IF (Board[4] = Board[5]) AND (Board[4] = Board[6]) AND (Board[4] <> ' ') THEN
+		Win = TRUE
+	ENDIF
+	-- Check for raw 3 for win
+	IF (Board[7] = Board[8]) AND (Board[7] = Board[9]) AND (Board[7] <> ' ') THEN
+		Win = TRUE
+	ENDIF
+	-- Check column 1 for win
+	IF (Board[1] = Board[4]) AND (Board[1] = Board[7]) AND (Board[1] <> ' ') THEN
+		Win = TRUE
+	ENDIF
+	-- Check column 2 for win
+	IF (Board[2] = Board[5]) AND (Board[2] = Board[8]) AND (Board[2] <> ' ') THEN
+		Win = TRUE
+	ENDIF			
+	-- Check column 3 for win
+	IF (Board[3] = Board[6]) AND (Board[3] = Board[9]) AND (Board[3] <> ' ') THEN
+		Win = TRUE
+	ENDIF
+	-- Check diagonal 1 for win
+	IF (Board[1] = Board[5]) AND (Board[1] = Board[9]) AND (Board[1] <> ' ') THEN
+		Win = TRUE
+	ENDIF
+	-- Check diagonal 2 for win
+	IF (Board[3] = Board[5]) AND (Board[3] = Board[7]) AND (Board[3] <> ' ') THEN
+		Win = TRUE
+	ENDIF
+	
+	-- Returns the result
+	RETURN(Win)
+	
+END CheckForWin
+
+-- Routine "CheckWichMarkWon"
+ROUTINE CheckWichMarkWon(Board: Board_Array; Mark: STRING) : BOOLEAN
+
+VAR
+Win: BOOLEAN
+
+BEGIN
+	
+	-- Initializes variables
+	Win = FALSE
+	
+	-- Check for raw 1 for win
+	IF (Board[1] = Board[2]) AND (Board[1] = Board[3]) AND (Board[1] = Mark) THEN
+		Win = TRUE
+	ENDIF
+	-- Check for raw 2 for win
+	IF (Board[4] = Board[5]) AND (Board[4] = Board[6]) AND (Board[4] = Mark) THEN
+		Win = TRUE
+	ENDIF
+	-- Check for raw 3 for win
+	IF (Board[7] = Board[8]) AND (Board[7] = Board[9]) AND (Board[7] = Mark) THEN
+		Win = TRUE
+	ENDIF
+	-- Check column 1 for win
+	IF (Board[1] = Board[4]) AND (Board[1] = Board[7]) AND (Board[1] = Mark) THEN
+		Win = TRUE
+	ENDIF
+	-- Check column 2 for win
+	IF (Board[2] = Board[5]) AND (Board[2] = Board[8]) AND (Board[2] = Mark) THEN
+		Win = TRUE	
+	ENDIF			
+	-- Check column 3 for win
+	IF (Board[3] = Board[6]) AND (Board[3] = Board[9]) AND (Board[3] = Mark) THEN
+		Win = TRUE
+	ENDIF
+	-- Check diagonal 1 for win
+	IF (Board[1] = Board[5]) AND (Board[1] = Board[9]) AND (Board[1] = Mark) THEN
+		Win = TRUE	
+	ENDIF
+	-- Check diagonal 2 for win
+	IF (Board[3] = Board[5]) AND (Board[3] = Board[7]) AND (Board[3] = Mark) THEN
+		Win = TRUE	
+	ENDIF
+	
+	-- Returns the result
+	RETURN(Win)
+	
+END CheckWichMarkWon
+
+-- Routine "CheckPosition"
+ROUTINE CheckPosition(Board : Board_Array; Board_Pos : INTEGER) : BOOLEAN
+
+VAR
+Dimension : INTEGER
+Valid_Num : BOOLEAN
+Valid_Pos : BOOLEAN
+
+BEGIN
+	
+	-- Initializes variables
+	Dimension = ARRAY_LEN(Board)
+	Valid_Num = FALSE
+	Valid_Pos = FALSE
+	
+	-- Checks for number between 0 and board dimension
+	IF (Board_Pos > 0) AND (Board_Pos <= Dimension) THEN
+		Valid_Num = TRUE
+	ENDIF
+	
+	-- Checks for Board_Pos free in the board
+	IF Valid_Num THEN
+		IF Board[Board_Pos] = ' ' THEN
+			Valid_Pos = TRUE
+		ENDIF
+	ENDIF
+	
+	RETURN(Valid_Pos)
+	
+END CheckPosition
+
+-- Routine "InsertLetter"
+ROUTINE InsertLetter(Board : Board_Array; Board_Pos : INTEGER; Letter : STRING)
+
+VAR
+Dimension : INTEGER
+
+BEGIN
+	
+	-- Initializes variables
+	Dimension = ARRAY_LEN(Board)
+	
+	IF CheckPosition(Board, Board_Pos) THEN
+		Board[Board_Pos] = Letter
+		PrintBoard(Board) -- Prints the board
+		
+		IF CheckForWin(Board) THEN -- Checks for win
+			IF Letter = 'X' THEN
+				WRITE('Robot Wins!')
+			else
+				WRITE('Player wins!')
+			ENDIF
+		ENDIF
+		
+		IF (CheckForDraw(Board) AND (NOT (CheckForWin(Board))))THEN -- Checks for draw
+			WRITE('Draw!')
+		ENDIF
+	else
+		WRITE('Selection invalid', CR)
+		WRITE('Enter new position: ')
+		READ(Board_Pos)
+		InsertLetter(Board, Board_Pos, Letter)
+	ENDIF
+	
+END InsertLetter
+
+-- Routine MiniMax
+ROUTINE MiniMax(Board: Board_Array; Depth : INTEGER; IsMaximizing : BOOLEAN) : INTEGER
+
+VAR
+Robot : STRING[1]
+Player : STRING[1]
+Score : INTEGER
+MaxEval : INTEGER
+MinEval : INTEGER
+i : INTEGER
+Dimension: INTEGER
+iMoves : INTEGER
+rMoves : REAL
+Flag : BOOLEAN
+Status : INTEGER
+
+BEGIN
+	
+	-- Initializes variables
+	Robot = 'X'
+	Player = 'O'
+	Dimension = ARRAY_LEN(Board)
+	
+	-- Counts the number of moves
+	GET_REG(1, Flag, iMoves,rMoves, Status)
+	iMoves = iMoves + 1
+	SET_INT_REG(1, iMoves, Status)
+	
+	-- Checks for computer win
+	IF CheckWichMarkWon(Board, Robot) THEN
+		RETURN(1)
+	ENDIF
+	
+	-- Checks for player win
+	IF CheckWichMarkWon(Board, Player) THEN
+		RETURN(-1)
+	ENDIF
+	
+	-- Checks for draw
+	IF CheckForDraw(Board) THEN
+		RETURN(0)
+	ENDIF
+	
+	IF Depth = 0 THEN
+		RETURN(0)
+	else
+	
+		IF isMaximizing THEN
+			MaxEval = -1000
+		
+			FOR i = 1 TO Dimension DO
+				IF Board[i] = ' ' THEN
+					Board[i] = Robot
+					Score = MiniMax(Board, Depth-1, FALSE) -- Finds the score for each empty position
+					Board[i] = ' '
+					IF (Score > MaxEval) THEN
+						MaxEval = Score -- Updates the best score
+					ENDIF
+				ENDIF
+			ENDFOR
+			RETURN(MaxEval)
+		
+		else
+			MinEval = 1000
+		
+			FOR i = 1 TO Dimension DO
+				IF Board[i] = ' ' THEN
+					Board[i] = Player
+					Score = MiniMax(Board, Depth-1, TRUE) -- Finds the score for each empty position
+					Board[i] = ' '
+					IF (Score < MinEval) THEN
+						MinEval = Score -- Updates the best score
+					ENDIF
+				ENDIF
+			ENDFOR
+			RETURN(MinEval)
+		
+		ENDIF
+	ENDIF
+	
+END MiniMax
+
+-- Routine "PlayerMove"
+ROUTINE PlayerMove(Board : Board_Array)
+
+VAR
+Board_Pos : INTEGER
+Player : STRING[1]
+
+BEGIN
+	
+	-- Initializes variables
+	Player = 'O'
+	
+	WRITE('Enter the position for O: ')
+	READ(Board_Pos)
+	InsertLetter(Board, Board_Pos, Player)
+	
+END PlayerMove
+
+-- Routine "RobotMove"
+ROUTINE RobotMove(Board : Board_Array; First_Move : BOOLEAN; Rnd_Num : INTEGER)
+
+VAR
+Robot : STRING[1]
+Score : INTEGER
+Best_Score : INTEGER
+Best_Move :  INTEGER 
+i : INTEGER
+Dimension: INTEGER
+Depth : INTEGER
+Moves : INTEGER
+Status : INTEGER
+
+BEGIN
+	
+	-- Initializes variables
+	Robot = 'X'
+	Best_Score = -1000
+	Best_Move = 0
+	Dimension = ARRAY_LEN(Board)
+	Depth = 4
+	SET_INT_REG(1,0,Status) -- Set R[1] to zero
+	
+	IF First_Move THEN
+		Best_Score = 0
+		Best_Move = Rnd_Num
+		Moves = 1
+		SET_INT_REG(1, Moves, Status)
+	else
+		FOR i = 1 TO Dimension DO
+			IF Board[i] = ' ' THEN
+				Board[i] = Robot
+				Score = MiniMax(Board, Depth, FALSE) -- Finds the score for each empty position
+				Board[i] = ' '
+				IF (Score > Best_Score) THEN
+					Best_Score = Score -- Updates the best score
+					Best_Move = i -- Updates the best move
+				ENDIF
+			ENDIF
+		ENDFOR 
+	ENDIF
+	
+	InsertLetter(Board, Best_Move, Robot)
+	
+END RobotMove
+
+-- Game Executable Section
+BEGIN
+	
+	-- Creates the board
+	CALL_PROG('Board_Def', Prog_Index)
+	
+	-- Prints the board
+	PrintBoard(Board)
+	DELAY 1000  -- Waits 1 sec.
+	
+	-- Call Randon_Num program
+	CALL_PROG('RANDOM_NUM',prog_index)
+	
+	-- Initializes variables
+	End_Game = FALSE
+	First_Move = TRUE
+
+	REPEAT
+		IF First_Move THEN
+			RobotMove(Board, First_Move, Rnd_Num) -- Robot turn, first move
+			First_Move = FALSE
+		else
+			RobotMove(Board, First_Move, Rnd_Num) -- Robot turn, not first move
+		ENDIF
+		
+		-- Checks for win or draw
+		IF (CheckForWin(Board) OR CheckForDraw(Board)) THEN
+			End_Game = TRUE			
+		else
+			PlayerMove(Board) -- Player turn
+			-- Checks for win or draw
+			IF (CheckForWin(Board) OR CheckForDraw(Board)) THEN
+				End_Game = TRUE
+			ENDIF
+		ENDIF
+	UNTIL (End_Game)
+	
+	DELAY 15000 -- Waits 15 sec.
+	
+END TicTacToe_V2

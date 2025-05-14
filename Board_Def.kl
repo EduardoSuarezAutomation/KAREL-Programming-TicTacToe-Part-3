@@ -1,0 +1,28 @@
+PROGRAM Board_Def
+%COMMENT = 'Board Definition'
+%NOLOCKGROUP
+%NOPAUSE = ERROR+COMMAND+TPENABLE 
+
+CONST
+Dimension = 9
+
+TYPE
+Board_Data = STRING[1]
+Board_Array = ARRAY[Dimension] OF Board_Data
+
+VAR
+Board : Board_Array
+Board_Element : Board_Data
+i : INTEGER
+
+BEGIN
+	
+	-- Initializes variables
+	Board_Element = ' '
+	
+	-- Initializes the board
+	FOR i = 1 TO Dimension DO
+		Board[i] = Board_Element
+	ENDFOR
+
+END Board_Def
